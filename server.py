@@ -3,8 +3,9 @@ import sqlite3
 import os
 
 DB_PATH = os.environ.get("DB_PATH", "medical_equipment.db")
+PORT = int(os.environ.get("PORT", 8000))
 
-mcp = FastMCP("Medical Equipment DB")
+mcp = FastMCP("Medical Equipment DB", host="0.0.0.0", port=PORT)
 
 @mcp.tool()
 def run_query(sql: str) -> str:
@@ -37,5 +38,4 @@ def describe_table(table_name: str) -> str:
     return str([{"name": r[1], "type": r[2]} for r in rows])
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
     mcp.run(transport="sse")
