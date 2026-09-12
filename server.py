@@ -1,0 +1,41 @@
+from mcp.server.fastmcp import FastMCP
+import sqlite3
+import os
+
+DB_PATH = os.environ.get("DB_PATH", "medical_equipment.db")
+
+mcp = FastMCP("Medical Equipment DB")
+
+@mcp.tool()
+def run_query(sql: str) -> str:
+    """Run a read-only SQL SELECT query against the medical_equipments table and return the results."""
+    if not sql.strip().lower().startswith("select"):
+        return "Error: Only SELECT queries are allowed."
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(sql).fetchall()
+        conn.close()
+        return str([dict(r) for r in rows])
+    except Exception as e:
+        return f"Error: {e}"
+
+@mcp.tool()
+def list_tables() -> str:
+    """List all tables in the database."""
+    conn = sqlite3.connect(DB_PATH)
+    rows = conn.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()
+    conn.close()
+    return str([r[0] for r in rows])
+
+@mcp.tool()
+def describe_table(table_name: str) -> str:
+    """Show the column names and types for a given table."""
+    conn = sqlite3.connect(DB_PATH)
+    rows = conn.execute(f"PRAGMA table_info({table_name});").fetchall()
+    conn.close()
+    return str([{"name": r[1], "type": r[2]} for r in rows])
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    mcp.run(transport="sse")
