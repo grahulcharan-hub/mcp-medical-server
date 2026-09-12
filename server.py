@@ -1,6 +1,10 @@
 from mcp.server.fastmcp import FastMCP
 import sqlite3
 import os
+import uvicorn
+from starlette.applications import Starlette
+from starlette.routing import Route
+from starlette.responses import HTMLResponse
 
 DB_PATH = os.environ.get("DB_PATH", "medical_equipment.db")
 PORT = int(os.environ.get("PORT", 8000))
@@ -37,5 +41,27 @@ def describe_table(table_name: str) -> str:
     conn.close()
     return str([{"name": r[1], "type": r[2]} for r in rows])
 
+async def homepage(request):
+    html = """
+    <html>
+      <head><title>Medical Equipment MCP Server</title></head>
+      <body style="font-family: sans-serif; max-width: 600px; margin: 60px auto;">
+        <h1>🏥 Medical Equipment MCP Server</h1>
+        <p>Status: <strong style="color: green;">Running</strong></p>
+        <p>This server exposes MCP tools over SSE for querying a medical equipment database.</p>
+        <ul>
+          <li><code>list_tables</code> — list all tables</li>
+          <li><code>describe_table</code> — show a table's columns</li>
+          <li><code>run_query</code> — run a read-only SELECT query</li>
+        </ul>
+        <p>MCP SSE endpoint: <code>/sse</code></p>
+      </body>
+    </html>
+    """
+    return HTMLResponse(html)
+
 if __name__ == "__main__":
-    mcp.run(transport="sse")
+    # Build the MCP SSE app, then add our homepage route alongside it
+    sse_app = mcp.sse_app()
+    sse_app.routes.insert(0, Route("/", homepage))
+    uvicorn.run(sse_app, host="0.0.0.0", port=PORT)
